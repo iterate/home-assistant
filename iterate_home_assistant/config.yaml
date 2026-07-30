@@ -8,8 +8,6 @@ arch:
   - aarch64
   - amd64
 stage: experimental
-startup: application
-boot: auto
 init: false
 homeassistant_api: true
 options:
