@@ -10,6 +10,14 @@ The app uses Home Assistant's Supervisor token locally and a single Iterate
 project secret remotely. It does not require Iterate OAuth, a config worker,
 host networking, host devices, or privileged Supervisor access.
 
+## Verified MVP
+
+The public `0.1.0` image has been installed on a Home Assistant Green
+(`aarch64`) and verified against `https://os.iterate.com`. The app streamed a
+174-entity initial snapshot and subsequent live events, mounted `itx.myHa`, and
+controlled a CeilSense's 16 RGB status LEDs through the Iterate production
+REPL.
+
 ## Install
 
 1. In Home Assistant, open **Settings → Apps → App store**.
@@ -34,6 +42,10 @@ pnpm build
 
 The container is published for `aarch64` (including Home Assistant Green) and
 `amd64` as `ghcr.io/iterate/home-assistant`.
+
+The app imports the server SDK from `iterate/node`. Until that export is in the
+next npm release, `package.json` pins an immutable public SDK preview build from
+the Iterate repository.
 
 ## License
 
