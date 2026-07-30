@@ -1,10 +1,9 @@
 import { ZodError } from "zod";
 import { runBridgeForever } from "./bridge.js";
 import { loadConfig } from "./config.js";
-import { BridgeJournal } from "./journal.js";
 import { log } from "./log.js";
 
-const bridgeVersion = process.env.BRIDGE_VERSION ?? "0.1.0";
+const bridgeVersion = process.env.BRIDGE_VERSION ?? "0.2.0";
 const shutdown = new AbortController();
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
@@ -18,7 +17,6 @@ try {
   const config = await loadConfig();
   const supervisorToken = process.env.SUPERVISOR_TOKEN;
   if (!supervisorToken) throw new Error("SUPERVISOR_TOKEN is missing");
-  const journal = await BridgeJournal.open();
 
   log.info("starting Iterate Home Assistant", {
     bridgeVersion,
@@ -30,7 +28,6 @@ try {
   await runBridgeForever({
     bridgeVersion,
     config,
-    journal,
     signal: shutdown.signal,
     supervisorToken,
   });

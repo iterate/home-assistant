@@ -1,6 +1,6 @@
 {
   "name": "@iterate/home-assistant-app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,22 +10,22 @@
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
-    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "home-assistant-js-websocket": "9.6.0",
     "iterate": "https://pkg.pr.new/iterate/iterate/iterate@4cde13be90b69db255029db54e163727bcf3f98c",
-    "ws": "8.19.0",
     "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/node": "24.3.0",
-    "@types/ws": "8.18.1",
-    "octokit": "5.0.5",
     "prettier": "3.6.2",
-    "typescript": "5.9.3",
-    "vitest": "4.0.15"
+    "typescript": "5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "ws": "8.21.1"
+    }
   },
   "packageManager": "pnpm@10.24.0"
 }

@@ -9,10 +9,6 @@ import {
   type MessageBase,
 } from "home-assistant-js-websocket";
 import type { BridgeConfig } from "./config.js";
-import { withTimeout } from "./timeout.js";
-
-const COMMAND_TIMEOUT_MS = 15_000;
-const MAX_CONCURRENT_COMMANDS = 32;
 
 export const CAPABILITY_TYPES = `export interface HomeAssistantCapability {
   /** Bridge and Home Assistant connection health. */
@@ -77,10 +73,6 @@ export function createHomeAssistantCapability(input: {
   connection: Connection;
   sessionId: string;
 }) {
-  const limit = createConcurrencyLimit(MAX_CONCURRENT_COMMANDS);
-  const run = <T>(label: string, operation: () => Promise<T>) =>
-    limit(() => withTimeout(operation(), COMMAND_TIMEOUT_MS, label));
-
   return {
     status: async () => ({
       bridgeVersion: input.bridgeVersion,
@@ -91,10 +83,10 @@ export function createHomeAssistantCapability(input: {
       sessionId: input.sessionId,
       streamPath: input.config.streamPath,
     }),
-    getStates: () => run("getStates", () => getStates(input.connection)),
-    getServices: () => run("getServices", () => getServices(input.connection)),
-    getConfig: () => run("getConfig", () => getConfig(input.connection)),
-    getUser: () => run("getUser", () => getUser(input.connection)),
+    getStates: () => getStates(input.connection),
+    getServices: () => getServices(input.connection),
+    getConfig: () => getConfig(input.connection),
+    getUser: () => getUser(input.connection),
     callService: (
       domain: string,
       service: string,
@@ -102,20 +94,16 @@ export function createHomeAssistantCapability(input: {
       target?: HassServiceTarget,
       returnResponse?: boolean,
     ) =>
-      run("callService", () =>
-        callService(
-          input.connection,
-          validateName(domain, "domain"),
-          validateName(service, "service"),
-          serviceData,
-          target,
-          returnResponse,
-        ),
+      callService(
+        input.connection,
+        validateName(domain, "domain"),
+        validateName(service, "service"),
+        serviceData,
+        target,
+        returnResponse,
       ),
     sendMessage: <Result = unknown>(message: MessageBase) =>
-      run("sendMessage", () =>
-        input.connection.sendMessagePromise<Result>(validateMessage(message)),
-      ),
+      input.connection.sendMessagePromise<Result>(validateMessage(message)),
   };
 }
 
@@ -148,22 +136,4 @@ function validateMessage(message: MessageBase): MessageBase {
     );
   }
   return { ...message };
-}
-
-function createConcurrencyLimit(maxConcurrent: number) {
-  let active = 0;
-  const pending: (() => void)[] = [];
-
-  return async <T>(operation: () => Promise<T>): Promise<T> => {
-    if (active >= maxConcurrent) {
-      await new Promise<void>((resolve) => pending.push(resolve));
-    }
-    active += 1;
-    try {
-      return await operation();
-    } finally {
-      active -= 1;
-      pending.shift()?.();
-    }
-  };
 }

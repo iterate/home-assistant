@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "allowImportingTsExtensions": true,
     "exactOptionalPropertyTypes": true,
     "lib": ["ES2024", "DOM", "ESNext.Disposable"],
     "module": "NodeNext",
@@ -12,5 +11,5 @@
     "target": "ES2024",
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/*.ts"]
 }

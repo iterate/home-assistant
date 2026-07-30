@@ -1,4 +1,4 @@
-FROM node:24-alpine AS build
+FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS build
 
 WORKDIR /app
 RUN corepack enable
@@ -10,9 +10,9 @@ COPY src ./src
 RUN pnpm build \
     && pnpm prune --prod
 
-FROM node:24-alpine
+FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd
 
-ARG BUILD_VERSION="0.1.0"
+ARG BUILD_VERSION="0.2.0"
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -29,4 +29,3 @@ LABEL \
     org.opencontainers.image.licenses="Apache-2.0"
 
 CMD ["node", "--enable-source-maps", "dist/main.js"]
-

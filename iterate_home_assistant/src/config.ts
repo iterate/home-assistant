@@ -12,13 +12,19 @@ const RawOptions = z
   .strict();
 
 const IDENTIFIER = /^[$A-Z_a-z][$\w]*$/;
-const UNSAFE_PATH_SEGMENTS = new Set([
+// Must match the mount-name boundary enforced by Iterate's capability host.
+// Once the SDK exports its path parser, this local copy should disappear.
+const RESERVED_CAPABILITY_SEGMENTS = new Set([
+  "__describe",
   "__proto__",
   "constructor",
-  "inspect",
   "prototype",
   "then",
-  "toJSON",
+  "apply",
+  "call",
+  "bind",
+  "dup",
+  "onRpcBroken",
 ]);
 
 export type BridgeConfig = {
@@ -37,9 +43,8 @@ export function parseOptions(input: unknown): BridgeConfig {
   if (!projectSlug) throw new Error("project_slug must not be blank");
 
   const iterateUrl = new URL(raw.iterate_url);
-  if (iterateUrl.protocol !== "https:" && iterateUrl.protocol !== "http:") {
-    throw new Error("iterate_url must use http or https");
-  }
+  if (iterateUrl.protocol !== "https:")
+    throw new Error("iterate_url must use https");
   if (iterateUrl.username || iterateUrl.password) {
     throw new Error("iterate_url must not contain credentials");
   }
@@ -71,8 +76,8 @@ export function parseItxPath(value: string): string[] {
     if (!IDENTIFIER.test(segment)) {
       throw new Error(`Invalid itx_path segment ${JSON.stringify(segment)}`);
     }
-    if (UNSAFE_PATH_SEGMENTS.has(segment)) {
-      throw new Error(`Unsafe itx_path segment ${JSON.stringify(segment)}`);
+    if (RESERVED_CAPABILITY_SEGMENTS.has(segment)) {
+      throw new Error(`Reserved itx_path segment ${JSON.stringify(segment)}`);
     }
   }
   return segments;

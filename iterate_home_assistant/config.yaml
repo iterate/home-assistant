@@ -1,6 +1,6 @@
 # https://developers.home-assistant.io/docs/apps/configuration/
 name: Iterate Home Assistant
-version: "0.1.0"
+version: "0.2.0"
 slug: iterate_home_assistant
 description: Stream Home Assistant events to Iterate and mount a live ITX capability
 url: "https://github.com/iterate/home-assistant/tree/main/iterate_home_assistant"
@@ -8,12 +8,11 @@ arch:
   - aarch64
   - amd64
 stage: experimental
-init: false
 homeassistant_api: true
 options:
   iterate_url: "https://os.iterate.com"
-  project_slug: ""
-  project_secret: ""
+  project_slug: null
+  project_secret: null
   itx_path: "myHa"
   stream_path: "/home-assistant/main"
 schema:

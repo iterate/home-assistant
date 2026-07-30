@@ -1,5 +1,4 @@
 import type { HassEvent } from "home-assistant-js-websocket";
-import { abortError } from "./timeout.js";
 
 export type BufferedHomeAssistantEvent = {
   event: HassEvent;
@@ -15,6 +14,12 @@ export class EventQueueOverflowError extends Error {
   }
 }
 
+function abortError(signal: AbortSignal): Error {
+  return signal.reason instanceof Error
+    ? signal.reason
+    : new Error("Operation aborted");
+}
+
 export class EventQueue {
   readonly #maxBytes: number;
   readonly #maxEvents: number;
@@ -26,14 +31,6 @@ export class EventQueue {
   constructor({ maxBytes = 4 * 1024 * 1024, maxEvents = 1_000 } = {}) {
     this.#maxBytes = maxBytes;
     this.#maxEvents = maxEvents;
-  }
-
-  get lastSequence(): number {
-    return this.#nextSequence - 1;
-  }
-
-  get length(): number {
-    return this.#items.length;
   }
 
   push(
@@ -68,18 +65,8 @@ export class EventQueue {
     return item;
   }
 
-  take(
-    maxEvents: number,
-    throughSequence = Number.POSITIVE_INFINITY,
-  ): BufferedHomeAssistantEvent[] {
-    let count = 0;
-    while (
-      count < this.#items.length &&
-      count < maxEvents &&
-      this.#items[count]!.sequence <= throughSequence
-    ) {
-      count += 1;
-    }
+  take(maxEvents: number): BufferedHomeAssistantEvent[] {
+    const count = Math.min(maxEvents, this.#items.length);
     const batch = this.#items.splice(0, count);
     for (const item of batch) this.#bytes -= item.sizeBytes;
     return batch;

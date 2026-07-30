@@ -1,112 +1,96 @@
 # Iterate Home Assistant
 
-This app opens Home Assistant's Supervisor-authorized WebSocket API, subscribes
-to all normal Home Assistant events, and connects outbound to an Iterate
-project. No Home Assistant URL, Home Assistant access token, inbound port, or
-Iterate OAuth flow is required.
+This app streams Home Assistant events into an Iterate project and mounts a
+live Home Assistant capability there. It connects outward from Home Assistant,
+so no public Home Assistant URL, inbound port, or separate Home Assistant
+access token is required.
+
+## Before you start
+
+You need an Iterate project:
+
+1. Open the project at [os.iterate.com](https://os.iterate.com).
+2. Copy its slug from the project URL.
+3. Open **Secrets → project-api-key → Reveal** and copy the value.
+
+Treat that value like a password. Anyone who can use the project capability
+can read Home Assistant state and invoke actions that your Home Assistant
+installation permits.
 
 ## Configuration
 
-| Option           | Example                  | Meaning                                    |
-| ---------------- | ------------------------ | ------------------------------------------ |
-| `iterate_url`    | `https://os.iterate.com` | Iterate deployment                         |
-| `project_slug`   | `my-project`             | Immutable Iterate project slug             |
-| `project_secret` | `…`                      | Project's `/secrets/project-api-key` value |
-| `itx_path`       | `myHa`                   | Live capability appears as `itx.myHa`      |
-| `stream_path`    | `/home-assistant/main`   | Independent destination stream             |
+| Option           | Example                  | Meaning                            |
+| ---------------- | ------------------------ | ---------------------------------- |
+| `iterate_url`    | `https://os.iterate.com` | Iterate deployment                 |
+| `project_slug`   | `my-project`             | Iterate project slug               |
+| `project_secret` | `…`                      | Project's `project-api-key` secret |
+| `itx_path`       | `myHa`                   | Capability appears as `itx.myHa`   |
+| `stream_path`    | `/home-assistant/main`   | Independent destination stream     |
 
-`itx_path` is a dotted JavaScript path. Both `myHa` and `itx.myHa` configure the
-same mount. `stream_path` is deliberately separate and must be an absolute
-Iterate stream path.
+`itx_path` is a dotted JavaScript path. Both `myHa` and `itx.myHa` configure
+the same mount. `stream_path` must be an absolute Iterate stream path.
 
-The MVP intentionally uses only the project secret: it does not implement an
-`auth.iterate.com` OAuth flow.
-
-The app stops on invalid configuration or authentication. Transient network
-and connection failures are retried with bounded backoff. A failed session is
-explicitly represented by a `home-assistant/gap` event before the next state
-snapshot; the bridge never grows an unbounded in-memory event queue.
+Start the app and open its log. A successful connection reports
+`bridge session ready`. Then enable **Start on boot** and **Watchdog**.
 
 ## Live capability
 
-The mount carries TypeScript declarations built from the official
-`home-assistant-js-websocket` types, plus these instructions. Its primary
-methods are:
+The capability includes TypeScript declarations built from the official
+[`home-assistant-js-websocket`](https://github.com/home-assistant/home-assistant-js-websocket)
+types.
 
 ```ts
 await itx.myHa.status();
+
 const states = await itx.myHa.getStates();
 const services = await itx.myHa.getServices();
 
 await itx.myHa.callService(
   "light",
   "turn_on",
-  { rgb_color: [255, 0, 255], brightness_pct: 15 },
+  { brightness_pct: 20, rgb_color: [0, 120, 255] },
   { entity_id: "light.example" },
 );
 ```
 
-For a CeilSense, find the enabled entity whose friendly name is
-`CeilSense Status LED`, call `light.turn_on` with a low brightness, and call
-`light.turn_off` when the proof is complete. CeilSense Complete exposes 16 RGB
-LEDs but no speaker. Avoid invoking calibration, factory reset, firmware
-update, or restart buttons as a connectivity test.
-
-`sendMessage` is an escape hatch for one-shot Home Assistant WebSocket
-commands. Subscription and authentication commands are rejected; subscriptions
-belong to the stream side of this app.
+`sendMessage` is the escape hatch for one-shot Home Assistant WebSocket
+commands. Authentication and subscription commands are rejected because the
+app owns that connection and forwards the event-bus subscription separately.
 
 ## Stream events
 
 - `home-assistant/bridge-session-started`
-- `home-assistant/event`
 - `home-assistant/state-snapshot`
-- `home-assistant/gap`
+- `home-assistant/event`
 
-Each raw Home Assistant event is retained under `payload.event` and accompanied
-by the bridge session id, receive timestamp, and monotonic session sequence.
-Large snapshots are chunked. Idempotency keys are deterministic within a
-session.
+Each session starts with a chunked snapshot of current entity states. Live
+events then retain the original Home Assistant event under `payload.event`,
+plus the bridge session ID, receive timestamp, and session sequence.
 
 Home Assistant deliberately excludes the high-volume `state_reported` event
-from an unfiltered `subscribe_events` subscription. All other events offered by
-that subscription are forwarded.
+from an unfiltered subscription. The stream therefore contains every normal
+event Home Assistant offers to that subscription, not every device protocol
+packet or media frame.
 
-The capability is live and session-bound. If either WebSocket goes away, the
-mount goes away too; the app tears down the other side and establishes a fresh
-session and state snapshot.
+If either WebSocket disconnects, the app tears down the session and reconnects
+both sides. A new session marker and state snapshot make the discontinuity
+visible. Events that occur while the app is offline are not recovered by this
+proof of concept.
 
-## Logs and data
+## Security and data
 
-Logs include connection state, configured paths, session ids, event counts, and
-explicit failures. They never include the Iterate project secret or Home
-Assistant Supervisor token.
+Entity states and event data leave the Home Assistant host and are stored in
+the configured Iterate project. Depending on your integrations, this can
+include presence, security, location, and environmental data.
 
-The only persistent app data is a small bridge journal in `/data` used to report
-an explicit gap after a process restart.
+The app requests only Home Assistant Core API access. It does not request host
+networking, device access, mounted Home Assistant configuration, or Supervisor
+administration. The Supervisor token remains local and is never logged or sent
+to Iterate.
 
-## Verified production proof
-
-On 30 July 2026, version `0.1.0` was installed from this public repository on a
-Home Assistant Green running Home Assistant `2026.7.4`. With:
-
-- project `iterate`;
-- mount `itx.myHa`;
-- stream `/home-assistant/main`;
-
-the app connected to production, published a 174-entity state snapshot, and
-continued publishing raw Home Assistant events visible in both the Iterate
-stream UI and API. Calls from the production Iterate REPL turned the CeilSense
-status LEDs on and off. A final live query reported the LEDs on at RGB
-`[0, 255, 80]` and 25% brightness.
-
-## MVP boundaries
-
-- Home Assistant Apps/Supervisor installations only.
-- Project-secret authentication only; no Iterate OAuth.
-- No `state_reported` events, because Home Assistant excludes them from an
-  unfiltered event subscription.
-- The capability exists only while both WebSocket connections are healthy.
-- Commands are ordinary Home Assistant service calls; the app does not add a
-  device-specific command model.
-- No media, camera, or video transport.
+For help, open an issue at
+[iterate/home-assistant](https://github.com/iterate/home-assistant/issues).
+Security reports should follow the repository's
+[security policy](https://github.com/iterate/home-assistant/security/policy).
+The app is licensed under
+[Apache-2.0](https://github.com/iterate/home-assistant/blob/main/LICENSE).

@@ -13,4 +13,4 @@ configuration:
     description: Dotted project-root mount path, such as myHa or home.assistant. An optional leading itx. is accepted.
   stream_path:
     name: Stream path
-    description: Independent Iterate stream path for Home Assistant sessions, snapshots, events, and gap records.
+    description: Independent Iterate stream path for Home Assistant sessions, snapshots, and events.

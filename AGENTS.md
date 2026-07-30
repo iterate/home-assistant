@@ -12,10 +12,11 @@ to an Iterate project.
   token.
 - `itx_path` and `stream_path` are independent configuration values.
 - Home Assistant subscriptions are bounded. On any connection or queue failure,
-  tear down both sides and record an explicit gap before starting a fresh
-  snapshot session.
+  tear down both sides and start a fresh, visibly identified snapshot session.
 - Use the official `home-assistant-js-websocket` package and types.
 - Use `iterate/node` for the Iterate connection and generated ITX contract.
+- Keep this proof of concept small. Prefer direct official-library calls over
+  local protocol wrappers, durable machinery, or speculative abstractions.
 
 ## Commands
 
@@ -24,7 +25,6 @@ Run from `iterate_home_assistant/`:
 ```bash
 pnpm install
 pnpm typecheck
-pnpm test
 pnpm build
 ```
 
