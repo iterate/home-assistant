@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: Typecheck, test, and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iterate_home_assistant
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: iterate_home_assistant/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Check formatting
+        run: pnpm format
+
+  home-assistant-lint:
+    name: Home Assistant app lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Run Home Assistant app linter
+        uses: frenck/action-addon-linter@v2.21
+        with:
+          path: ./iterate_home_assistant
+
+  image:
+    name: App image
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    uses: ./.github/workflows/build-app.yaml
+    with:
+      publish: ${{ github.event_name == 'push' }}
+    secrets: inherit

@@ -1,0 +1,16 @@
+configuration:
+  iterate_url:
+    name: Iterate URL
+    description: Iterate deployment base URL. Use https://os.iterate.com for production.
+  project_slug:
+    name: Project slug
+    description: Immutable slug of the Iterate project that will receive this Home Assistant connection.
+  project_secret:
+    name: Project secret
+    description: Value of the Iterate project's /secrets/project-api-key secret. It is never logged.
+  itx_path:
+    name: ITX path
+    description: Dotted project-root mount path, such as myHa or home.assistant. An optional leading itx. is accepted.
+  stream_path:
+    name: Stream path
+    description: Independent Iterate stream path for Home Assistant sessions, snapshots, events, and gap records.
