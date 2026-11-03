@@ -15,7 +15,7 @@
   "dependencies": {
     "home-assistant-js-websocket": "9.6.0",
     "iterate": "https://pkg.pr.new/iterate/iterate/iterate@4cde13be90b69db255029db54e163727bcf3f98c",
-    "zod": "4.3.6"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@types/node": "24.3.0",
